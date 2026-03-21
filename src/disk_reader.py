@@ -1,77 +1,50 @@
-def read_blocks(file_path, block_size=4096):
-    block_number = 1
-    overlap = 512   # increased overlap (important)
+import os
+
+def scan_disk(image_path, block_size=4096):
+    block_number = 0
+    found_types = set()
 
     try:
-        with open(file_path, "rb") as file:
-
-            print("Starting disk scan...\n")
-            found_types = set()
+        with open(image_path, "rb") as file:
+            print(" Starting disk scan...\n")
 
             while True:
                 block = file.read(block_size)
-
                 if not block:
                     break
 
-                # ================= FILE TYPE DETECTION =================
-
-                # PDF
-                if b"%PDF" in block and "PDF" not in found_types:
-                    print(f"PDF found in block {block_number}")
-                    found_types.add("PDF")
-
-                # PNG (full signature)
-                if b"\x89PNG\r\n\x1a\n" in block and "PNG" not in found_types:
-                    print(f"PNG found in block {block_number}")
-                    found_types.add("PNG")
-
-                # JPG (stronger detection)
-                if (b"\xff\xd8" in block or b"\xff\xd8\xff\xe1" in block) and "JPG" not in found_types:
-                    print(f"JPG found in block {block_number}")
-                    found_types.add("JPG")
-
-                # MP3
-                if (b"ID3" in block or b"\xff\xfb" in block) and "MP3" not in found_types:
-                    print(f"MP3 found in block {block_number}")
-                    found_types.add("MP3")
-
-                # MP4 (FIXED ❗ removed [:20])
-                if b"ftyp" in block and "MP4" not in found_types:
-                    print(f"MP4 found in block {block_number}")
-                    found_types.add("MP4")
-
-                # ======================================================
-
-                # Debug: print first few blocks
-                if block_number <= 5:
-                    print(f"Reading block {block_number}, size={len(block)}")
-
-                # ✅ STOP EARLY (important for demo)
-                if len(found_types) == 5:
-                    print("\nAll file types found!")
-                    break
-
-                yield block_number, block
-
                 block_number += 1
 
-                # ✅ Proper overlap (safe)
-                if overlap > 0 and file.tell() > overlap:
-                    file.seek(-overlap, 1)
+                # -------- PDF --------
+                if b"%PDF" in block:
+                    print(f"[+] PDF detected at block {block_number}")
+                    found_types.add("PDF")
 
-        print("\nScan completed.")
-        print("Found types:", found_types)
+                # -------- JPG --------
+                if b"\xff\xd8\xff" in block:
+                    print(f"[+] JPG detected at block {block_number}")
+                    found_types.add("JPG")
+
+                # -------- MP3 --------
+                if b"ID3" in block:
+                    print(f"[+] MP3 detected at block {block_number}")
+                    found_types.add("MP3")
+
+                # -------- MP4 --------
+                if b"ftyp" in block:
+                    print(f"[+] MP4 detected at block {block_number}")
+                    found_types.add("MP4")
+
+            print("\n Scan complete!")
+            print(" File types found:", ", ".join(found_types) if found_types else "None")
 
     except FileNotFoundError:
-        print("Error: File not found.")
+        print(" File not found. Check path!")
     except Exception as e:
-        print(f"Error: {e}")
+        print("Error:", e)
 
 
-# ================= TEST RUN =================
+# -------- RUN --------
 if __name__ == "__main__":
-    file_path = "input/new_disk.img"
-
-    for block_number, block in read_blocks(file_path):
-        pass
+    image_path = input("Enter disk image path: ")
+    scan_disk(image_path)
